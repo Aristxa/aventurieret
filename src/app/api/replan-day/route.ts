@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { verifyStops } from "@/lib/geocode";
+import { guard } from "@/lib/guard";
 import { ndjsonResponse } from "@/lib/ndjson";
 import { PlannerError, regenerateDay } from "@/lib/planner";
 import { DaySchema, PlanSchema, TripRequestSchema } from "@/lib/types";
@@ -18,6 +19,8 @@ export async function POST(req: Request) {
   if (!parsed.success || parsed.data.dayIndex >= parsed.data.plan.days.length) {
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }
+  const blocked = guard(req, "replan");
+  if (blocked) return blocked;
   const { request, plan, dayIndex, instruction } = parsed.data;
 
   return ndjsonResponse(async ({ send, progress }) => {

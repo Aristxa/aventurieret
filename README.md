@@ -15,6 +15,8 @@ npm run dev                  # http://localhost:3000
 | `ANTHROPIC_API_KEY` | Trip planning (Claude Opus 5.5). Used on the server only. |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | The map, and checking that every place exists and has the right coordinates. |
 | `WANDER_EFFORT` | `low` (default) / `medium` / `high`: planning depth for each day. Higher is more careful but slower. |
+| `WANDER_INVITE_CODE` | If set, visitors need this code to plan (or a link like `/?invite=CODE`). Set it on every public deployment. |
+| `WANDER_DAILY_PLANS` / `_REPLANS` / `_TIKTOK` | Per-visitor daily limits (default 5 / 20 / 40). Approximate on Vercel because counters are in memory. |
 | `NEXT_PUBLIC_GYG_PARTNER_ID`, `NEXT_PUBLIC_BOOKING_AID` | Affiliate IDs. They're added to booking links so you earn commission. |
 
 ## How it works

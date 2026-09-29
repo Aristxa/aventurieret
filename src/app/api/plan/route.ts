@@ -1,4 +1,5 @@
 import { verifyStops } from "@/lib/geocode";
+import { guard } from "@/lib/guard";
 import { ndjsonResponse } from "@/lib/ndjson";
 import { generateDay, generateEssentials, generateOutline, PlannerError } from "@/lib/planner";
 import { DaySchema, EssentialsSchema, OutlineSchema, TripRequestSchema, type DayBrief, type Outline, type TripRequest } from "@/lib/types";
@@ -26,6 +27,8 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: "Invalid trip details." }, { status: 400 });
   }
+  const blocked = guard(req, "plan");
+  if (blocked) return blocked;
   const trip = parsed.data;
 
   return ndjsonResponse(async ({ send, progress }) => {

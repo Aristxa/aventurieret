@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatDate, nearestDayIndex } from "@/lib/client";
+import { apiPost, formatDate, nearestDayIndex } from "@/lib/client";
 import type { ImportResult, PlaceResult, Preview } from "@/lib/tiktok";
 import type { SavedSpot, Trip } from "@/lib/types";
 
@@ -15,18 +15,17 @@ const STATUS: Record<PlaceResult["status"], string> = {
 };
 
 async function callImport(trip: Trip, url: string, manualName?: string): Promise<ImportResult> {
-  const res = await fetch("/api/tiktok", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url,
-      manualName,
-      destination: `${trip.plan.destination.name}, ${trip.plan.destination.country}`,
-      center: { lat: trip.plan.destination.lat, lng: trip.plan.destination.lng },
-    }),
+  const res = await apiPost("/api/tiktok", {
+    url,
+    manualName,
+    destination: `${trip.plan.destination.name}, ${trip.plan.destination.country}`,
+    center: { lat: trip.plan.destination.lat, lng: trip.plan.destination.lng },
   }).catch(() => null);
   if (!res) return { ok: false, reason: "unavailable", message: "Lost connection. Try again." };
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  // Invite/limit errors come back as { error, message } rather than an ImportResult.
+  if (!res.ok || !("ok" in data)) return { ok: false, reason: "unavailable", message: data.message ?? "Something went wrong." };
+  return data;
 }
 
 export function TikTokImport({

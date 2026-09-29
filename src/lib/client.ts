@@ -58,16 +58,41 @@ export function deleteTrip(id: string) {
   writeTrips(getTrips().filter((t) => t.id !== id));
 }
 
-/** POSTs JSON and calls onEvent for each NDJSON line the server streams back. */
-export async function streamRequest(url: string, body: unknown, onEvent: (e: StreamEvent) => void) {
+// Invite code for protected deployments, kept in this browser.
+const INVITE_KEY = "wander.invite";
+export const INVITE_EVENT = "wander:invite-required";
+
+export function getInvite() {
+  try {
+    return localStorage.getItem(INVITE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function saveInvite(code: string) {
+  try {
+    localStorage.setItem(INVITE_KEY, code.trim());
+  } catch {}
+}
+
+/** POSTs JSON to one of our API routes with the invite code attached. */
+export async function apiPost(url: string, body: unknown) {
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-wander-code": getInvite() },
     body: JSON.stringify(body),
   });
+  if (res.status === 401) window.dispatchEvent(new Event(INVITE_EVENT));
+  return res;
+}
+
+/** POSTs JSON and calls onEvent for each NDJSON line the server streams back. */
+export async function streamRequest(url: string, body: unknown, onEvent: (e: StreamEvent) => void) {
+  const res = await apiPost(url, body);
   if (!res.ok || !res.body) {
     const err = await res.json().catch(() => ({}));
-    onEvent({ type: "error", message: err.error ?? `Request failed (${res.status})` });
+    onEvent({ type: "error", message: err.message ?? err.error ?? `Request failed (${res.status})` });
     return;
   }
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();

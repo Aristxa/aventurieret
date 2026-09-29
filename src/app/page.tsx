@@ -2,9 +2,20 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Generating } from "@/components/Generating";
+import { InviteGate } from "@/components/InviteGate";
 import { PlannerForm } from "@/components/PlannerForm";
 import { TripView } from "@/components/TripView";
-import { deleteTrip, formatDate, getServerTrips, getTrips, saveTrip, streamRequest, subscribeTrips } from "@/lib/client";
+import {
+  deleteTrip,
+  formatDate,
+  getServerTrips,
+  getTrips,
+  INVITE_EVENT,
+  saveInvite,
+  saveTrip,
+  streamRequest,
+  subscribeTrips,
+} from "@/lib/client";
 import type { Day, DayBrief, Essentials, Trip, TripRequest } from "@/lib/types";
 
 type View =
@@ -47,6 +58,23 @@ export default function Home() {
   // Trips planned this session, keyed by id. Days stream into these.
   const [builds, setBuilds] = useState<Record<string, Build>>({});
   const saved = useRef(new Map<string, Trip>());
+  const [inviteOpen, setInviteOpen] = useState(false);
+  // The last trip request, retried after the visitor enters an invite code.
+  const lastRequest = useRef<TripRequest | null>(null);
+
+  useEffect(() => {
+    // Share links can carry the code: /?invite=CODE
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get("invite");
+    if (code) {
+      saveInvite(code);
+      url.searchParams.delete("invite");
+      window.history.replaceState(null, "", url);
+    }
+    const open = () => setInviteOpen(true);
+    window.addEventListener(INVITE_EVENT, open);
+    return () => window.removeEventListener(INVITE_EVENT, open);
+  }, []);
 
   // Persist builds whenever their trip changes (progress-only updates skip this).
   useEffect(() => {
@@ -62,6 +90,7 @@ export default function Home() {
     setBuilds((prev) => (prev[id] ? { ...prev, [id]: fn(prev[id]) } : prev));
 
   const plan = async (request: TripRequest) => {
+    lastRequest.current = request;
     setError(null);
     setView({ kind: "generating", request });
     window.scrollTo({ top: 0 });
@@ -140,6 +169,17 @@ export default function Home() {
     }));
   };
 
+  const invite = inviteOpen && (
+    <InviteGate
+      onClose={() => setInviteOpen(false)}
+      onDone={() => {
+        setInviteOpen(false);
+        setError(null);
+        if (view.kind === "home" && lastRequest.current) plan(lastRequest.current);
+      }}
+    />
+  );
+
   if (view.kind === "generating") return <Generating destination={view.request.destination} />;
 
   if (view.kind === "trip") {
@@ -147,6 +187,8 @@ export default function Home() {
     const trip = build?.trip ?? trips.find((t) => t.id === view.tripId);
     if (trip) {
       return (
+        <>
+        {invite}
         <TripView
           trip={trip}
           pending={build?.pending ?? {}}
@@ -154,12 +196,14 @@ export default function Home() {
           onBack={() => setView({ kind: "home" })}
           onChange={updateTrip}
         />
+        </>
       );
     }
   }
 
   return (
     <main className="relative flex-1 overflow-hidden">
+      {invite}
       <div className="pointer-events-none absolute -right-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-coral/15 blur-3xl" />
       <div className="pointer-events-none absolute -left-40 top-80 h-[28rem] w-[28rem] rounded-full bg-teal/10 blur-3xl" />
 
