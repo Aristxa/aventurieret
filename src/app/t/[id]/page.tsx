@@ -9,12 +9,12 @@ const getShared = cache(loadShare);
 
 export async function generateMetadata(props: PageProps<"/t/[id]">): Promise<Metadata> {
   const shared = await getShared((await props.params).id);
-  if (!shared) return { title: "Trip not found · Aventurieret" };
+  if (!shared) return { title: "Trip not found · Aventurierët" };
   const { plan } = shared;
   return {
-    title: `${plan.title} · Aventurieret`,
+    title: `${plan.title} · Aventurierët`,
     description: plan.summary,
-    openGraph: { title: plan.title, description: plan.summary, siteName: "Aventurieret" },
+    openGraph: { title: plan.title, description: plan.summary, siteName: "Aventurierët" },
   };
 }
 

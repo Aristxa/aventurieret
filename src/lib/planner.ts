@@ -38,6 +38,8 @@ function describeRequest(r: TripRequest) {
     r.arrival && `Arrival/departure: ${r.arrival}`,
     r.mobility && `Mobility: ${r.mobility}`,
     r.dietary && `Dietary: ${r.dietary}`,
+    r.lang === "sq" &&
+      "Language: write every text field (titles, summaries, themes, descriptions, tips, essentials, phrase meanings) in Albanian (shqip). Keep place names as they are known locally.",
   ]
     .filter(Boolean)
     .join("\n");

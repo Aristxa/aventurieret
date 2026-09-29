@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 import { INTERESTS, type TripRequest } from "@/lib/types";
 
-const STEPS = ["Where & when", "Who's going", "Your vibe", "Fine print"] as const;
+const STEP_COUNT = 4;
 
 function twoWeeksOut() {
   const d = new Date();
@@ -25,6 +26,7 @@ const DEFAULT: TripRequest = {
   arrival: "",
   mobility: "",
   dietary: "",
+  lang: "en",
 };
 
 function Choice<T extends string>({
@@ -66,12 +68,14 @@ const inputCls =
   "w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-ink";
 
 export function PlannerForm({ onSubmit }: { onSubmit: (r: TripRequest) => void }) {
+  const t = useT();
+  const f = t.form;
   const [step, setStep] = useState(0);
   const [r, setR] = useState<TripRequest>(DEFAULT);
   const set = <K extends keyof TripRequest>(k: K, v: TripRequest[K]) => setR((p) => ({ ...p, [k]: v }));
 
   const canNext = step !== 0 || r.destination.trim().length >= 2;
-  const last = step === STEPS.length - 1;
+  const last = step === STEP_COUNT - 1;
 
   const next = () => {
     if (!canNext) return;
@@ -82,7 +86,7 @@ export function PlannerForm({ onSubmit }: { onSubmit: (r: TripRequest) => void }
   return (
     <div className="rounded-3xl border border-line bg-paper/80 p-6 shadow-xl backdrop-blur sm:p-8">
       <div className="mb-6 flex items-center gap-2">
-        {STEPS.map((s, i) => (
+        {f.steps.map((s, i) => (
           <button
             key={s}
             type="button"
@@ -106,18 +110,18 @@ export function PlannerForm({ onSubmit }: { onSubmit: (r: TripRequest) => void }
         {step === 0 && (
           <>
             <div>
-              <Label>Where to?</Label>
+              <Label>{f.whereTo}</Label>
               <input
                 autoFocus
                 className={`${inputCls} font-display text-2xl`}
-                placeholder="Lisbon, Kyoto, the Amalfi Coast…"
+                placeholder={f.wherePlaceholder}
                 value={r.destination}
                 onChange={(e) => set("destination", e.target.value)}
               />
             </div>
             <div className="grid gap-6 sm:grid-cols-2">
               <div>
-                <Label>Arriving</Label>
+                <Label>{f.arriving}</Label>
                 <input
                   type="date"
                   min={new Date().toISOString().slice(0, 10)}
@@ -128,7 +132,7 @@ export function PlannerForm({ onSubmit }: { onSubmit: (r: TripRequest) => void }
               </div>
               <div>
                 <Label>
-                  Staying <span className="normal-case text-ink">{r.days} {r.days === 1 ? "day" : "days"}</span>
+                  {f.staying} <span className="normal-case text-ink">{t.days(r.days)}</span>
                 </Label>
                 <input
                   type="range"
@@ -146,29 +150,31 @@ export function PlannerForm({ onSubmit }: { onSubmit: (r: TripRequest) => void }
         {step === 1 && (
           <>
             <div>
-              <Label>Who&apos;s going?</Label>
+              <Label>{f.whosGoing}</Label>
               <Choice
                 value={r.travelers}
                 onChange={(v) => set("travelers", v)}
-                options={[
-                  { value: "solo", label: "Solo", hint: "Just me", icon: "🎒" },
-                  { value: "couple", label: "Couple", hint: "Two of us", icon: "💞" },
-                  { value: "friends", label: "Friends", hint: "The crew", icon: "🎉" },
-                  { value: "family", label: "Family", hint: "With kids", icon: "👨‍👩‍👧" },
-                ]}
+                options={(
+                  [
+                    ["solo", "🎒"],
+                    ["couple", "💞"],
+                    ["friends", "🎉"],
+                    ["family", "👨‍👩‍👧"],
+                  ] as const
+                ).map(([value, icon]) => ({ value, icon, label: f.travelers[value][0], hint: f.travelers[value][1] }))}
               />
             </div>
             {r.travelers === "family" && (
               <div className="animate-rise">
-                <Label>Kids&apos; ages</Label>
-                <input className={inputCls} placeholder="e.g. 4 and 9" value={r.kidsAges} onChange={(e) => set("kidsAges", e.target.value)} />
+                <Label>{f.kidsAges}</Label>
+                <input className={inputCls} placeholder={f.kidsPlaceholder} value={r.kidsAges} onChange={(e) => set("kidsAges", e.target.value)} />
               </div>
             )}
             <div>
-              <Label>Anything about getting around?</Label>
+              <Label>{f.mobility}</Label>
               <input
                 className={inputCls}
-                placeholder="e.g. stroller, bad knee, no long walks (optional)"
+                placeholder={f.mobilityPlaceholder}
                 value={r.mobility}
                 onChange={(e) => set("mobility", e.target.value)}
               />
@@ -179,31 +185,35 @@ export function PlannerForm({ onSubmit }: { onSubmit: (r: TripRequest) => void }
         {step === 2 && (
           <>
             <div>
-              <Label>Pace</Label>
+              <Label>{f.pace}</Label>
               <Choice
                 value={r.pace}
                 onChange={(v) => set("pace", v)}
-                options={[
-                  { value: "chill", label: "Chill", hint: "Long lunches, naps", icon: "🌿" },
-                  { value: "balanced", label: "Balanced", hint: "See a lot, rest a bit", icon: "⚖️" },
-                  { value: "packed", label: "Packed", hint: "Sleep when home", icon: "⚡" },
-                ]}
+                options={(
+                  [
+                    ["chill", "🌿"],
+                    ["balanced", "⚖️"],
+                    ["packed", "⚡"],
+                  ] as const
+                ).map(([value, icon]) => ({ value, icon, label: f.paces[value][0], hint: f.paces[value][1] }))}
               />
             </div>
             <div>
-              <Label>Budget</Label>
+              <Label>{f.budget}</Label>
               <Choice
                 value={r.budget}
                 onChange={(v) => set("budget", v)}
-                options={[
-                  { value: "budget", label: "Smart", hint: "Street food & free gems", icon: "🪙" },
-                  { value: "mid", label: "Comfortable", hint: "Treat yourself sometimes", icon: "💳" },
-                  { value: "luxury", label: "Splurge", hint: "Best of the best", icon: "🥂" },
-                ]}
+                options={(
+                  [
+                    ["budget", "🪙"],
+                    ["mid", "💳"],
+                    ["luxury", "🥂"],
+                  ] as const
+                ).map(([value, icon]) => ({ value, icon, label: f.budgets[value][0], hint: f.budgets[value][1] }))}
               />
             </div>
             <div>
-              <Label>What do you love?</Label>
+              <Label>{f.love}</Label>
               <div className="flex flex-wrap gap-2">
                 {INTERESTS.map((i) => {
                   const on = r.interests.includes(i);
@@ -216,7 +226,7 @@ export function PlannerForm({ onSubmit }: { onSubmit: (r: TripRequest) => void }
                         on ? "border-coral bg-coral text-white" : "border-line bg-paper hover:border-ink/40"
                       }`}
                     >
-                      {i}
+                      {f.interests[i] ?? i}
                     </button>
                   );
                 })}
@@ -228,27 +238,27 @@ export function PlannerForm({ onSubmit }: { onSubmit: (r: TripRequest) => void }
         {step === 3 && (
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <Label>Must do or see</Label>
+              <Label>{f.mustDo}</Label>
               <textarea
                 className={`${inputCls} min-h-20`}
-                placeholder="That rooftop bar from TikTok, a cooking class, sunset somewhere special…"
+                placeholder={f.mustDoPlaceholder}
                 value={r.mustDo}
                 onChange={(e) => set("mustDo", e.target.value)}
               />
             </div>
             <div>
-              <Label>Skip</Label>
-              <input className={inputCls} placeholder="Tourist traps, museums, clubs…" value={r.avoid} onChange={(e) => set("avoid", e.target.value)} />
+              <Label>{f.skip}</Label>
+              <input className={inputCls} placeholder={f.skipPlaceholder} value={r.avoid} onChange={(e) => set("avoid", e.target.value)} />
             </div>
             <div>
-              <Label>Food needs</Label>
-              <input className={inputCls} placeholder="Vegetarian, halal, no seafood…" value={r.dietary} onChange={(e) => set("dietary", e.target.value)} />
+              <Label>{f.food}</Label>
+              <input className={inputCls} placeholder={f.foodPlaceholder} value={r.dietary} onChange={(e) => set("dietary", e.target.value)} />
             </div>
             <div className="sm:col-span-2">
-              <Label>Arrival & departure</Label>
+              <Label>{f.arrival}</Label>
               <input
                 className={inputCls}
-                placeholder="e.g. land at LIS 14:00, fly out 18:00 on the last day"
+                placeholder={f.arrivalPlaceholder}
                 value={r.arrival}
                 onChange={(e) => set("arrival", e.target.value)}
               />
@@ -262,14 +272,14 @@ export function PlannerForm({ onSubmit }: { onSubmit: (r: TripRequest) => void }
             onClick={() => setStep(step - 1)}
             className={`text-sm font-medium text-muted hover:text-ink ${step === 0 ? "invisible" : ""}`}
           >
-            ← Back
+            {f.back}
           </button>
           <button
             type="submit"
             disabled={!canNext}
             className="rounded-full bg-coral px-7 py-3 font-semibold text-white shadow-lg shadow-coral/30 transition hover:scale-[1.03] disabled:opacity-40 disabled:hover:scale-100"
           >
-            {last ? "✨ Plan my trip" : "Next →"}
+            {last ? f.submit : f.next}
           </button>
         </div>
       </form>

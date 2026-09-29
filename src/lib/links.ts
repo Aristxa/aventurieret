@@ -28,16 +28,16 @@ export function uberLink(stop: Stop) {
   return `https://m.uber.com/ul/?${p}`;
 }
 
-export function bookingLinkFor(stop: Stop, city: string): { label: string; href: string } | null {
+export function bookingLinkFor(stop: Stop, city: string): { kind: "tickets" | "book" | "reserve"; href: string } | null {
   switch (stop.bookingType) {
     case "activity":
     case "tickets": {
       const p = new URLSearchParams({ q: `${stop.name} ${city}` });
       if (AFFILIATE.getYourGuide) p.set("partner_id", AFFILIATE.getYourGuide);
-      return { label: stop.bookingType === "tickets" ? "Get tickets" : "Book", href: `https://www.getyourguide.com/s/?${p}` };
+      return { kind: stop.bookingType === "tickets" ? "tickets" : "book", href: `https://www.getyourguide.com/s/?${p}` };
     }
     case "restaurant":
-      return { label: "Reserve", href: `https://www.google.com/maps/search/?api=1&query=${enc(`${stop.name} ${city} reservation`)}` };
+      return { kind: "reserve", href: `https://www.google.com/maps/search/?api=1&query=${enc(`${stop.name} ${city} reservation`)}` };
     default:
       return null;
   }

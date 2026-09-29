@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { Generating } from "@/components/Generating";
 import { InviteGate } from "@/components/InviteGate";
+import { LangToggle } from "@/components/LangToggle";
 import { PlannerForm } from "@/components/PlannerForm";
+import { Tour, TourButton, useTour } from "@/components/Tour";
 import { TripView } from "@/components/TripView";
 import {
   deleteTrip,
@@ -16,6 +18,7 @@ import {
   streamRequest,
   subscribeTrips,
 } from "@/lib/client";
+import { useLang, useT } from "@/lib/i18n";
 import type { Day, DayBrief, Essentials, Trip, TripRequest } from "@/lib/types";
 
 type View =
@@ -61,6 +64,9 @@ export default function Home() {
   const [inviteOpen, setInviteOpen] = useState(false);
   // The last trip request, retried after the visitor enters an invite code.
   const lastRequest = useRef<TripRequest | null>(null);
+  const t = useT();
+  const lang = useLang();
+  const tour = useTour("home");
 
   useEffect(() => {
     // Share links can carry the code: /?invite=CODE
@@ -89,7 +95,8 @@ export default function Home() {
   const patch = (id: string, fn: (b: Build) => Build) =>
     setBuilds((prev) => (prev[id] ? { ...prev, [id]: fn(prev[id]) } : prev));
 
-  const plan = async (request: TripRequest) => {
+  const plan = async (form: TripRequest) => {
+    const request = { ...form, lang };
     lastRequest.current = request;
     setError(null);
     setView({ kind: "generating", request });
@@ -108,7 +115,7 @@ export default function Home() {
       patch(tripId, (b) => ({
         ...b,
         pending: {},
-        error: `${message} Days that didn't finish can be planned individually.`,
+        error: `${message} ${t.home.unfinishedDays}`,
       }));
     };
 
@@ -149,9 +156,9 @@ export default function Home() {
         } else if (e.type === "error") fail(e.message);
       });
     } catch {
-      fail("Lost connection to the planner.");
+      fail(t.home.lostConnection);
     }
-    if (!finished) fail("The planner stopped unexpectedly.");
+    if (!finished) fail(t.home.stopped);
   };
 
   const updateTrip = (edited: Trip) => {
@@ -204,36 +211,46 @@ export default function Home() {
   return (
     <main className="relative flex-1 overflow-hidden">
       {invite}
+      {tour.open && !inviteOpen && (
+        <Tour
+          onClose={tour.close}
+          steps={[
+            t.tour.home.welcome,
+            { target: "lang", ...t.tour.home.lang },
+            { target: "form", ...t.tour.home.form },
+            { target: "features", ...t.tour.home.features },
+            { target: "trips", ...t.tour.home.trips },
+            { target: "help", ...t.tour.home.help },
+          ]}
+        />
+      )}
       <div className="pointer-events-none absolute -right-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-coral/15 blur-3xl" />
       <div className="pointer-events-none absolute -left-40 top-80 h-[28rem] w-[28rem] rounded-full bg-teal/10 blur-3xl" />
 
       <div className="relative mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_1.1fr] lg:gap-x-10 lg:py-20">
         <div className="lg:col-start-1 lg:row-start-1 lg:pt-8">
-          <div className="font-display text-2xl font-semibold">
-            Aventurieret<span className="text-coral">.</span>
+          <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-3">
+            <div className="font-display text-[2rem] font-semibold tracking-tight sm:text-5xl">
+              {t.brand}<span className="text-coral">.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <LangToggle />
+              <TourButton onClick={tour.start} />
+            </div>
           </div>
           <h1 className="mt-6 font-display text-4xl leading-[1.05] sm:mt-10 sm:text-6xl">
-            Your whole trip,
+            {t.home.heading1}
             <br />
-            <em className="text-coral">planned like a local.</em>
+            <em className="text-coral">{t.home.heading2}</em>
           </h1>
-          <p className="mt-4 max-w-md text-base text-ink/70 sm:mt-6 sm:text-lg">
-            Tell us how long you&apos;re staying and what you love. Aventurieret builds a day-by-day plan with hidden gems,
-            realistic timing, and everything you&apos;d otherwise forget: airport transfers, closures, tipping, what to pack.
-          </p>
+          <p className="mt-4 max-w-md text-base text-ink/70 sm:mt-6 sm:text-lg">{t.home.intro}</p>
         </div>
 
-        <ul className="order-last space-y-3 text-sm lg:order-none lg:col-start-1 lg:row-start-2">
-            {[
-              ["💎", "Hidden gems, not just the top-10 list"],
-              ["🗺️", "Every stop on a map, routed so you don't zig-zag"],
-              ["✨", "Rain? Tired? Re-plan any day in one tap"],
-              ["▶", "Paste a TikTok and its places land on your map"],
-              ["🎟️", "Book tickets, tables, stays and rides from the plan"],
-            ].map(([i, t]) => (
-              <li key={t} className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-paper shadow-sm">{i}</span>
-                {t}
+        <ul data-tour="features" className="order-last space-y-3 text-sm lg:order-none lg:col-start-1 lg:row-start-2">
+            {t.home.features.map(([icon, text]) => (
+              <li key={icon} className="flex items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-paper shadow-sm">{icon}</span>
+                {text}
               </li>
             ))}
         </ul>
@@ -242,25 +259,27 @@ export default function Home() {
           {error && (
             <div className="animate-rise mb-4 rounded-2xl border border-coral/30 bg-coral-soft px-4 py-3 text-sm text-coral">{error}</div>
           )}
-          <PlannerForm onSubmit={plan} />
+          <div data-tour="form">
+            <PlannerForm onSubmit={plan} />
+          </div>
 
           {trips.length > 0 && (
-            <div className="mt-8">
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted">Your trips</h2>
+            <div data-tour="trips" className="mt-8">
+              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted">{t.home.yourTrips}</h2>
               <div className="grid gap-3 sm:grid-cols-2">
-                {trips.map((t) => (
-                  <div key={t.id} className="group relative rounded-2xl border border-line bg-paper p-4 transition hover:border-ink/30">
-                    <button onClick={() => setView({ kind: "trip", tripId: t.id })} className="block w-full text-left">
-                      <div className="font-display text-lg leading-tight">{t.plan.title}</div>
+                {trips.map((trip) => (
+                  <div key={trip.id} className="group relative rounded-2xl border border-line bg-paper p-4 transition hover:border-ink/30">
+                    <button onClick={() => setView({ kind: "trip", tripId: trip.id })} className="block w-full text-left">
+                      <div className="font-display text-lg leading-tight">{trip.plan.title}</div>
                       <div className="mt-1 text-xs text-muted">
-                        {t.plan.destination.name} · {formatDate(t.request.startDate)} · {t.plan.days.length} days
+                        {trip.plan.destination.name} · {formatDate(trip.request.startDate)} · {t.days(trip.plan.days.length)}
                       </div>
                     </button>
                     <button
                       onClick={() => {
-                        deleteTrip(t.id);
+                        deleteTrip(trip.id);
                       }}
-                      aria-label="Delete trip"
+                      aria-label={t.home.deleteTrip}
                       className="absolute right-3 top-3 p-1 text-xs text-muted hover:text-coral sm:opacity-0 sm:group-hover:opacity-100"
                     >
                       ✕

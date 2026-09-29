@@ -2,29 +2,25 @@
 
 import { useState } from "react";
 import { apiPost, formatDate, nearestDayIndex } from "@/lib/client";
+import { useT } from "@/lib/i18n";
 import type { ImportResult, PlaceResult, Preview } from "@/lib/tiktok";
 import type { SavedSpot, Trip } from "@/lib/types";
 
 type Target = number | "saved";
 
-const STATUS: Record<PlaceResult["status"], string> = {
-  found: "✓ On the map",
-  approx: "≈ Neighbourhood only",
-  not_found: "Not found on the map",
-  other_city: "Different city",
-};
+type Messages = { lostConnection: string; wentWrong: string };
 
-async function callImport(trip: Trip, url: string, manualName?: string): Promise<ImportResult> {
+async function callImport(trip: Trip, url: string, m: Messages, manualName?: string): Promise<ImportResult> {
   const res = await apiPost("/api/tiktok", {
     url,
     manualName,
     destination: `${trip.plan.destination.name}, ${trip.plan.destination.country}`,
     center: { lat: trip.plan.destination.lat, lng: trip.plan.destination.lng },
   }).catch(() => null);
-  if (!res) return { ok: false, reason: "unavailable", message: "Lost connection. Try again." };
+  if (!res) return { ok: false, reason: "unavailable", message: m.lostConnection };
   const data = await res.json().catch(() => ({}));
   // Invite/limit errors come back as { error, message } rather than an ImportResult.
-  if (!res.ok || !("ok" in data)) return { ok: false, reason: "unavailable", message: data.message ?? "Something went wrong." };
+  if (!res.ok || !("ok" in data)) return { ok: false, reason: "unavailable", message: data.message ?? m.wentWrong };
   return data;
 }
 
@@ -37,6 +33,8 @@ export function TikTokImport({
   onAdd: (spots: SavedSpot[], target: Target) => void;
   onClose: () => void;
 }) {
+  const t = useT();
+  const tt = t.tiktok;
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +72,7 @@ export function TikTokImport({
     setLoading(true);
     setPlaces(null);
     setPreview(null);
-    apply(await callImport(trip, url));
+    apply(await callImport(trip, url, tt));
     setLoading(false);
   };
 
@@ -83,7 +81,7 @@ export function TikTokImport({
     const name = manual[index]?.trim();
     if (!name) return;
     setLoading(true);
-    const r = await callImport(trip, url, name);
+    const r = await callImport(trip, url, tt, name);
     setLoading(false);
     if (!r.ok) {
       setError(r.message);
@@ -105,10 +103,10 @@ export function TikTokImport({
       >
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="font-display text-2xl">Add from TikTok</h2>
-            <p className="mt-1 text-sm text-muted">Paste a video link. We&apos;ll find the places and pin them on your trip.</p>
+            <h2 className="font-display text-2xl">{tt.title}</h2>
+            <p className="mt-1 text-sm text-muted">{tt.subtitle}</p>
           </div>
-          <button onClick={onClose} aria-label="Close" className="text-muted hover:text-ink">✕</button>
+          <button onClick={onClose} aria-label={t.trip.close} className="text-muted hover:text-ink">✕</button>
         </div>
 
         <form
@@ -129,7 +127,7 @@ export function TikTokImport({
             disabled={loading || !url.trim()}
             className="rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-paper disabled:opacity-40"
           >
-            {loading && !places ? "Reading…" : "Find"}
+            {loading && !places ? tt.reading : tt.find}
           </button>
         </form>
 
@@ -173,13 +171,13 @@ export function TikTokImport({
                       <span className="block text-xs text-muted">{p.spot.address}</span>
                     </span>
                     <span className={`shrink-0 text-xs ${p.status === "found" ? "text-teal" : "text-gold"}`}>
-                      {isDup(p.spot) ? "Already in your trip" : STATUS[p.status]}
+                      {isDup(p.spot) ? tt.alreadyIn : tt.status[p.status]}
                     </span>
                   </label>
                 ) : (
                   <div>
                     <div className="flex justify-between gap-2">
-                      <span className="font-semibold">{p.name || "Which place is this?"}</span>
+                      <span className="font-semibold">{p.name || tt.whichPlace}</span>
                       {p.name && <span className="text-xs text-coral">{p.message}</span>}
                     </div>
                     <form
@@ -192,11 +190,11 @@ export function TikTokImport({
                       <input
                         value={manual[i] ?? ""}
                         onChange={(e) => setManual((m) => ({ ...m, [i]: e.target.value }))}
-                        placeholder={p.name ? "Correct name or address…" : "Type the place's name…"}
+                        placeholder={p.name ? tt.correctName : tt.typeName}
                         className="min-w-0 flex-1 rounded-lg border border-line bg-sand px-3 py-2 text-sm outline-none focus:border-ink"
                       />
                       <button disabled={loading} className="rounded-lg border border-ink px-3 text-xs font-semibold disabled:opacity-40">
-                        Search
+                        {tt.search}
                       </button>
                     </form>
                   </div>
@@ -215,10 +213,10 @@ export function TikTokImport({
               onChange={(e) => setTarget(e.target.value === "saved" ? "saved" : Number(e.target.value))}
               className="min-w-0 flex-1 rounded-xl border border-line bg-sand px-3 py-3 text-sm"
             >
-              <option value="saved">📌 Save for later</option>
+              <option value="saved">{tt.saveForLater}</option>
               {days.map((d, i) => (
                 <option key={d.dayNumber} value={i}>
-                  Add to Day {d.dayNumber} · {formatDate(d.date)} · {d.area}
+                  {tt.addToDay(d.dayNumber)} · {formatDate(d.date)} · {d.area}
                 </option>
               ))}
             </select>
@@ -226,7 +224,7 @@ export function TikTokImport({
               onClick={() => onAdd(chosen, target)}
               className="rounded-xl bg-coral px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-coral/30 hover:opacity-90"
             >
-              {target === "saved" ? "Save" : "Add"} {chosen.length} {chosen.length === 1 ? "place" : "places"}
+              {target === "saved" ? tt.save(chosen.length) : tt.add(chosen.length)}
             </button>
           </div>
         )}

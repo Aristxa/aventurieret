@@ -4,21 +4,23 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { addSpotToDay, apiPost, fetchShareEnabled, formatDate, reflowDay, streamRequest } from "@/lib/client";
+import { useT } from "@/lib/i18n";
 import { staysLink } from "@/lib/links";
 import type { Day, SavedSpot, Trip } from "@/lib/types";
+import { LangToggle } from "./LangToggle";
 import { StopCard } from "./StopCard";
 import { TikTokImport } from "./TikTokImport";
+import { Tour, TourButton, useTour } from "./Tour";
 import { TripMap } from "./TripMap";
 
+// Instructions for the planner; their button labels are in the dictionary (t.trip.tweaks).
 const QUICK_TWEAKS = [
-  { label: "🌧️ It's raining", text: "It's going to rain all day - make it mostly indoor and cosy." },
-  { label: "😴 More relaxed", text: "Make this day much more relaxed: fewer stops, more downtime." },
-  { label: "💸 Cheaper", text: "Make this day cheaper: free sights, street food, walkable." },
-  { label: "💎 More local", text: "Swap the touristy spots for places locals love." },
-  { label: "🌙 Night owl", text: "Start later and push the day into a great evening and nightlife." },
+  "It's going to rain all day - make it mostly indoor and cosy.",
+  "Make this day much more relaxed: fewer stops, more downtime.",
+  "Make this day cheaper: free sights, street food, walkable.",
+  "Swap the touristy spots for places locals love.",
+  "Start later and push the day into a great evening and nightlife.",
 ];
-
-const ENERGY = { light: "🟢 Easy day", moderate: "🟡 Moderate", intense: "🔴 Big day" };
 
 export function TripView({
   trip,
@@ -38,6 +40,9 @@ export function TripView({
   onBack: () => void;
 }) {
   const { plan } = trip;
+  const t = useT();
+  const tr = t.trip;
+  const tour = useTour("trip");
   const [tab, setTab] = useState<"days" | "essentials" | "stay">("days");
   const [dayIdx, setDayIdx] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -119,8 +124,8 @@ export function TripView({
         setActiveId(null);
       }
       if (e.type === "error") setReplanError(e.message);
-    }).catch(() => setReplanError("Lost connection while re-planning. Try again."));
-    if (!done) setReplanError((m) => m ?? "Couldn't re-plan this day. Try again.");
+    }).catch(() => setReplanError(tr.replanLost));
+    if (!done) setReplanError((m) => m ?? tr.replanFailed);
     setReplanning(null);
     setCustomTweak("");
   };
@@ -135,7 +140,7 @@ export function TripView({
     const res = await apiPost("/api/share", { trip: { request: trip.request, plan }, existing: trip.share }).catch(() => null);
     const data = res ? await res.json().catch(() => ({})) : {};
     if (!res?.ok || !data.id) {
-      setShareState({ status: "error", message: data.message ?? "Couldn't create the link. Try again." });
+      setShareState({ status: "error", message: data.message ?? tr.linkError });
       return;
     }
     if (data.id !== trip.share?.id) onChange({ ...trip, share: { id: data.id, editToken: data.editToken } });
@@ -157,23 +162,47 @@ export function TripView({
 
   return (
     <div className="mx-auto w-full max-w-7xl flex-1 px-4 pb-16 sm:px-6">
+      {tour.open && (
+        <Tour
+          onClose={tour.close}
+          steps={[
+            { target: "header", ...t.tour.trip.header },
+            { target: "tabs", ...t.tour.trip.tabs },
+            { target: "days", ...t.tour.trip.days },
+            { target: "map", ...t.tour.trip.map },
+            { target: "change", ...t.tour.trip.change },
+            { target: "stops", ...t.tour.trip.stops },
+            { target: "tiktok", ...t.tour.trip.tiktok },
+            { target: "share", ...t.tour.trip.share },
+            { target: "help", ...t.tour.trip.help },
+          ]}
+        />
+      )}
       <header className="py-6">
-        {!readOnly && (
-          <button onClick={onBack} className="text-sm text-muted hover:text-ink">
-            ← All trips
-          </button>
-        )}
-        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+        <div className="flex items-center justify-between gap-3">
+          {readOnly ? (
+            <span />
+          ) : (
+            <button onClick={onBack} className="text-sm text-muted hover:text-ink">
+              {tr.allTrips}
+            </button>
+          )}
+          <div className="flex items-center gap-2">
+            <LangToggle />
+            <TourButton onClick={tour.start} />
+          </div>
+        </div>
+        <div data-tour="header" className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
             <h1 className="font-display text-3xl leading-tight break-words sm:text-5xl">{plan.title}</h1>
             <p className="mt-2 text-ink/75">{plan.summary}</p>
           </div>
           <div className="grid w-full grid-cols-4 gap-2 text-center sm:flex sm:w-auto sm:gap-3">
             {[
-              [plan.days.length, "days"],
-              [totals.stops, "places"],
-              [totals.gems, "hidden gems"],
-              [plan.budget.perPersonPerDay, "pp / day"],
+              [plan.days.length, tr.stats[0]],
+              [totals.stops, tr.stats[1]],
+              [totals.gems, tr.stats[2]],
+              [plan.budget.perPersonPerDay, tr.stats[3]],
             ].map(([v, l]) => (
               <div key={String(l)} className="min-w-0 rounded-2xl border border-line bg-paper px-2 py-2 sm:px-4">
                 <div className="font-display text-base break-words sm:text-xl">{v}</div>
@@ -183,37 +212,34 @@ export function TripView({
           </div>
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-3">
-        <nav className="flex w-full gap-1 rounded-full border border-line bg-paper p-1 text-sm font-medium sm:w-fit">
-          {([
-            ["days", "🗓️ Itinerary"],
-            ["essentials", "🧳 Know before you go"],
-            ["stay", "🏨 Where to stay"],
-          ] as const).map(([k, l]) => (
+        <nav data-tour="tabs" className="flex w-full gap-1 rounded-full border border-line bg-paper p-1 text-sm font-medium sm:w-fit">
+          {(["days", "essentials", "stay"] as const).map((k) => (
             <button
               key={k}
               onClick={() => setTab(k)}
-              className={`flex-1 rounded-full px-4 py-2 transition sm:flex-none ${tab === k ? "bg-ink text-paper" : "hover:bg-sand"}`}
+              className={`flex-1 rounded-full px-3 py-2 transition sm:flex-none sm:px-4 ${tab === k ? "bg-ink text-paper" : "hover:bg-sand"}`}
             >
-              {l}
+              {tr.tabs[k]}
             </button>
           ))}
         </nav>
           {!readOnly && (
             <>
               <button
+                data-tour="tiktok"
                 onClick={() => setImportOpen(true)}
                 className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper shadow-lg transition hover:scale-[1.03]"
               >
-                ▶ Add from TikTok
+                {tr.addTikTok}
               </button>
               {canShare && (
-              <div className="relative">
+              <div data-tour="share" className="relative">
                 <button
                   onClick={shareTrip}
                   disabled={building || shareState.status === "working"}
                   className="rounded-full border border-ink px-5 py-2.5 text-sm font-semibold transition hover:bg-ink hover:text-paper disabled:opacity-50"
                 >
-                  {shareState.status === "working" ? "Creating link…" : trip.share ? "🔗 Update & share" : "🔗 Share trip"}
+                  {shareState.status === "working" ? tr.creatingLink : trip.share ? tr.updateShare : tr.share}
                 </button>
                 {(shareState.status === "done" || shareState.status === "error") && (
                   <div className="animate-rise absolute left-0 z-30 mt-2 w-80 rounded-2xl border border-line bg-paper p-4 text-sm shadow-2xl sm:left-auto sm:right-0">
@@ -221,7 +247,7 @@ export function TripView({
                       <p className="text-coral">{shareState.message}</p>
                     ) : (
                       <>
-                        <p className="font-semibold">{shareState.copied ? "✓ Link copied!" : "Your trip link"}</p>
+                        <p className="font-semibold">{shareState.copied ? tr.linkCopied : tr.yourLink}</p>
                         <input
                           readOnly
                           value={shareState.url}
@@ -229,12 +255,12 @@ export function TripView({
                           className="mt-2 w-full rounded-lg border border-line bg-sand px-3 py-2 text-xs"
                         />
                         <p className="mt-2 text-xs text-muted">
-                          Anyone with the link can view this trip. If you edit it later, tap Share again to update the link.
+                          {tr.linkNote}
                         </p>
                       </>
                     )}
                     <button onClick={() => setShareState({ status: "idle" })} className="mt-2 text-xs font-medium text-muted hover:text-ink">
-                      Close
+                      {tr.close}
                     </button>
                   </div>
                 )}
@@ -249,7 +275,7 @@ export function TripView({
       {tab === "days" && (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
           <section>
-            <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-3">
+            <div data-tour="days" className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-3">
               {plan.days.map((d, i) => (
                 <button
                   key={d.dayNumber}
@@ -262,7 +288,7 @@ export function TripView({
                   }`}
                 >
                   <div className="text-xs opacity-80">
-                    Day {d.dayNumber} {pending[i] ? <span className="inline-block animate-spin">◌</span> : d.stops.length === 0 ? "·" : ""}
+                    {t.dayN(d.dayNumber)} {pending[i] ? <span className="inline-block animate-spin">◌</span> : d.stops.length === 0 ? "·" : ""}
                   </div>
                   <div className="text-sm font-semibold">{formatDate(d.date)}</div>
                 </button>
@@ -271,7 +297,7 @@ export function TripView({
 
             {saved.length > 0 && (
               <div className="mb-3 rounded-2xl border border-dashed border-line bg-paper/60 p-3">
-                <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">📌 Saved from TikTok ({saved.length})</div>
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted">{tr.savedFromTikTok(saved.length)}</div>
                 <div className="no-scrollbar flex gap-2 overflow-x-auto">
                   {saved.map((s) => (
                     <div key={s.id} className="flex shrink-0 items-center gap-2 rounded-xl border border-line bg-paper py-1.5 pl-1.5 pr-2 text-sm">
@@ -287,11 +313,11 @@ export function TripView({
                         disabled={!!dayPending || !!replanning}
                         className="rounded-full bg-coral px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-40"
                       >
-                        + Day {day.dayNumber}
+                        {tr.addToDay(day.dayNumber)}
                       </button>
                       <button
                         onClick={() => onChange({ ...trip, saved: saved.filter((x) => x.id !== s.id) })}
-                        aria-label={`Remove ${s.name}`}
+                        aria-label={tr.remove(s.name)}
                         className="text-xs text-muted hover:text-coral"
                       >
                         ✕
@@ -302,28 +328,28 @@ export function TripView({
               </div>
             )}
 
-            <div className="mt-2 rounded-3xl border border-line bg-paper/60 p-3 sm:p-6">
+            <div data-tour="stops" className="mt-2 rounded-3xl border border-line bg-paper/60 p-3 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="font-display text-2xl sm:text-3xl">{day.theme}</h2>
                   <p className="mt-1 text-sm text-muted">
-                    {day.area} · {ENERGY[day.energy]}
+                    {day.area} · {tr.energy[day.energy]}
                   </p>
                 </div>
                 {!readOnly && (
-                <div className="relative">
+                <div data-tour="change" className="relative">
                   <button
                     onClick={() => setMenuOpen((o) => !o)}
                     disabled={!!replanning || !!dayPending}
                     className="rounded-full border border-ink px-4 py-2 text-sm font-semibold transition hover:bg-ink hover:text-paper disabled:opacity-50"
                   >
-                    ✨ Change this day
+                    {tr.changeDay}
                   </button>
                   {menuOpen && (
                     <div className="animate-rise absolute right-0 z-30 mt-2 w-72 rounded-2xl border border-line bg-paper p-2 shadow-2xl">
-                      {QUICK_TWEAKS.map((t) => (
-                        <button key={t.label} onClick={() => replan(t.text)} className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-sand">
-                          {t.label}
+                      {QUICK_TWEAKS.map((text, n) => (
+                        <button key={text} onClick={() => replan(text)} className="block w-full rounded-xl px-3 py-2 text-left text-sm hover:bg-sand">
+                          {tr.tweaks[n]}
                         </button>
                       ))}
                       <form
@@ -336,7 +362,7 @@ export function TripView({
                         <input
                           value={customTweak}
                           onChange={(e) => setCustomTweak(e.target.value)}
-                          placeholder="Or say anything… “add a beach”"
+                          placeholder={tr.tweakPlaceholder}
                           className="w-full rounded-lg border border-line bg-sand px-3 py-2 text-sm outline-none focus:border-ink"
                         />
                       </form>
@@ -349,7 +375,7 @@ export function TripView({
               {notice && <p className="mt-3 rounded-xl bg-coral-soft px-3 py-2 text-sm text-coral">{notice}</p>}
               {day.rainPlan && !replanning && (
                 <p className="mt-3 rounded-xl bg-teal-soft px-3 py-2 text-sm text-teal">
-                  <span className="font-semibold">If it rains: </span>
+                  <span className="font-semibold">{tr.ifRains}</span>
                   {day.rainPlan}
                 </p>
               )}
@@ -358,7 +384,7 @@ export function TripView({
               {dayPending ? (
                 <div className="py-12 text-center">
                   <div className="animate-drift text-4xl">🧭</div>
-                  <p className="mt-3 text-muted">Planning day {day.dayNumber}…</p>
+                  <p className="mt-3 text-muted">{tr.planningDay(day.dayNumber)}</p>
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
                     {dayPending.map((p, i) => (
                       <span key={i} className="animate-rise rounded-full border border-line bg-paper px-3 py-1 text-sm">📍 {p}</span>
@@ -367,20 +393,20 @@ export function TripView({
                 </div>
               ) : day.stops.length === 0 && !replanning ? (
                 <div className="py-12 text-center">
-                  <p className="text-muted">This day hasn&apos;t been planned yet.</p>
+                  <p className="text-muted">{tr.notPlanned}</p>
                   {!readOnly && (
                   <button
                     onClick={() => replan(`Plan this day from scratch: ${day.theme} in ${day.area}.`)}
                     className="mt-4 rounded-full bg-coral px-6 py-2.5 font-semibold text-white hover:opacity-90"
                   >
-                    ✨ Plan this day
+                    {tr.planThisDay}
                   </button>
                   )}
                 </div>
               ) : replanning ? (
                 <div className="py-12 text-center">
                   <div className="animate-drift text-4xl">🧭</div>
-                  <p className="mt-3 text-muted">Re-planning day {day.dayNumber}…</p>
+                  <p className="mt-3 text-muted">{tr.replanningDay(day.dayNumber)}</p>
                   <div className="mt-4 flex flex-wrap justify-center gap-2">
                     {replanning.places.map((p, i) => (
                       <span key={i} className="animate-rise rounded-full border border-line bg-paper px-3 py-1 text-sm">📍 {p}</span>
@@ -409,13 +435,14 @@ export function TripView({
               )}
               {!readOnly && day.stops.length > 0 && !dayPending && !replanning && (
                 <p className="mt-2 text-center text-xs text-muted">
-                  Drag ⋮⋮ to reorder — times update automatically.{building && " Other days are still being planned."}
+                  {tr.dragHint}
+                  {building && tr.othersBuilding}
                 </p>
               )}
             </div>
           </section>
 
-          <aside className="order-first h-[260px] sm:h-[360px] lg:sticky lg:top-6 lg:order-none lg:h-[calc(100vh-3rem)]">
+          <aside data-tour="map" className="order-first h-[260px] sm:h-[360px] lg:sticky lg:top-6 lg:order-none lg:h-[calc(100vh-3rem)]">
             <TripMap stops={day.stops} saved={saved} center={plan.destination} activeId={activeId} onSelect={onSelect} />
           </aside>
         </div>
@@ -426,18 +453,21 @@ export function TripView({
           <Essentials trip={trip} />
         ) : (
           <p className="rounded-3xl border border-line bg-paper p-8 text-center text-muted">
-            {building ? "🧭 Gathering local tips for your dates…" : "These tips couldn't be loaded for this trip."}
+            {building ? tr.gatheringTips : tr.tipsFailed}
           </p>
         ))}
 
       {tab === "stay" && (
         <div className="max-w-3xl space-y-4">
           <div className="rounded-3xl border border-line bg-paper p-6">
-            <div className="text-sm font-semibold uppercase tracking-wider text-muted">Base yourself in</div>
+            <div className="text-sm font-semibold uppercase tracking-wider text-muted">{tr.baseIn}</div>
             <h2 className="mt-1 font-display text-4xl">{plan.whereToStay.area}</h2>
             <p className="mt-3 text-ink/80">{plan.whereToStay.why}</p>
             {plan.whereToStay.alternatives.length > 0 && (
-              <p className="mt-3 text-sm text-muted">Also good: {plan.whereToStay.alternatives.join(" · ")}</p>
+              <p className="mt-3 text-sm text-muted">
+                {tr.alsoGood}
+                {plan.whereToStay.alternatives.join(" · ")}
+              </p>
             )}
             <a
               href={staysLink(trip)}
@@ -445,12 +475,12 @@ export function TripView({
               rel="noopener"
               className="mt-5 inline-block rounded-full bg-coral px-6 py-3 font-semibold text-white shadow-lg shadow-coral/30 hover:opacity-90"
             >
-              See stays in {plan.whereToStay.area} for your dates ↗
+              {tr.seeStays(plan.whereToStay.area)}
             </a>
           </div>
           <div className="rounded-3xl border border-line bg-paper p-6">
-            <h3 className="font-display text-2xl">Getting there from the airport</h3>
-            <p className="mt-2 text-ink/80">{plan.essentials.arrival || (building ? "Working it out…" : "Not available.")}</p>
+            <h3 className="font-display text-2xl">{tr.fromAirport}</h3>
+            <p className="mt-2 text-ink/80">{plan.essentials.arrival || (building ? tr.workingOut : tr.notAvailable)}</p>
           </div>
         </div>
       )}
@@ -459,22 +489,24 @@ export function TripView({
 }
 
 function Essentials({ trip }: { trip: Trip }) {
+  const tr = useT().trip;
   const e = trip.plan.essentials;
+  const l = tr.essentials;
   const cards: [string, string, string][] = [
-    ["✈️", "Arrival", e.arrival],
-    ["🚇", "Getting around", e.gettingAround],
-    ["💶", "Money & tipping", e.money],
-    ["📶", "Staying connected", e.connectivity],
-    ["🔌", "Power", e.power],
-    ["🌤️", "Weather", e.weather],
-    ["🛡️", "Safety", e.safety],
-    ["🙏", "Etiquette", e.etiquette],
+    ["✈️", l.arrival, e.arrival],
+    ["🚇", l.gettingAround, e.gettingAround],
+    ["💶", l.money, e.money],
+    ["📶", l.connectivity, e.connectivity],
+    ["🔌", l.power, e.power],
+    ["🌤️", l.weather, e.weather],
+    ["🛡️", l.safety, e.safety],
+    ["🙏", l.etiquette, e.etiquette],
   ];
   return (
     <div className="space-y-6">
       {e.heads_up.length > 0 && (
         <div className="rounded-3xl border border-coral/30 bg-coral-soft p-6">
-          <h3 className="font-display text-2xl text-coral">⚠️ Heads up for your dates</h3>
+          <h3 className="font-display text-2xl text-coral">{tr.headsUp}</h3>
           <ul className="mt-3 space-y-1.5 text-sm">
             {e.heads_up.map((h) => (
               <li key={h}>• {h}</li>
@@ -493,7 +525,7 @@ function Essentials({ trip }: { trip: Trip }) {
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-3xl border border-line bg-paper p-6">
-          <h3 className="font-display text-2xl">🧳 Pack this</h3>
+          <h3 className="font-display text-2xl">{tr.pack}</h3>
           <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
             {e.packing.map((p) => (
               <li key={p}>
@@ -505,7 +537,7 @@ function Essentials({ trip }: { trip: Trip }) {
           </ul>
         </div>
         <div className="rounded-3xl border border-line bg-paper p-6">
-          <h3 className="font-display text-2xl">🗣️ Say it like a local</h3>
+          <h3 className="font-display text-2xl">{tr.phrases}</h3>
           <dl className="mt-3 space-y-2 text-sm">
             {e.phrases.map((p) => (
               <div key={p.phrase} className="flex justify-between gap-4 border-b border-line pb-2 last:border-0">

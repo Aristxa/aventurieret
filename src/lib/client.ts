@@ -1,5 +1,6 @@
 "use client";
 
+import { getLang } from "./i18n";
 import type { Day, SavedSpot, Stop, StreamEvent, Trip } from "./types";
 
 const STORAGE_KEY = "wander.trips.v1";
@@ -155,7 +156,7 @@ export function reflowDay(day: Day, stops: Stop[]): Day {
 
 export function formatDate(iso: string, opts: Intl.DateTimeFormatOptions = { weekday: "short", day: "numeric", month: "short" }) {
   const d = new Date(iso + "T00:00:00");
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString(undefined, opts);
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString(getLang() === "sq" ? "sq" : undefined, opts);
 }
 
 const DEFAULT_MINUTES: Record<Stop["category"], number> = {

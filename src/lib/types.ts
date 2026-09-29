@@ -31,6 +31,8 @@ export const TripRequestSchema = z.object({
   arrival: z.string().max(200).default(""),
   mobility: z.string().max(200).default(""),
   dietary: z.string().max(200).default(""),
+  // Language the plan is written in; trips saved before this existed are English.
+  lang: z.enum(["en", "sq"]).default("en"),
 });
 export type TripRequest = z.infer<typeof TripRequestSchema>;
 

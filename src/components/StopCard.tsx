@@ -2,6 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useT } from "@/lib/i18n";
 import { bookingLinkFor, directionsLink, mapsLink, tiktokSearchLink, uberLink } from "@/lib/links";
 import type { Stop } from "@/lib/types";
 
@@ -41,6 +42,8 @@ export function StopCard({
   onRemove: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id, disabled: readOnly });
+  const t = useT();
+  const s = t.stop;
   const booking = bookingLinkFor(stop, city);
   const leg = stop.travelToNext;
 
@@ -64,7 +67,7 @@ export function StopCard({
               {...attributes}
               {...listeners}
               onClick={(e) => e.stopPropagation()}
-              aria-label="Drag to reorder"
+              aria-label={s.drag}
               className="mt-0.5 cursor-grab touch-none text-muted/60 hover:text-ink active:cursor-grabbing"
             >
               ⋮⋮
@@ -79,17 +82,17 @@ export function StopCard({
                   {ICONS[stop.category]} {stop.name}
                 </h3>
                 {stop.isHiddenGem && (
-                  <span className="rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-semibold text-gold">💎 Hidden gem</span>
+                  <span className="rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-semibold text-gold">{s.hiddenGem}</span>
                 )}
                 {stop.tiktokUrl && (
-                  <span className="rounded-full bg-ink px-2 py-0.5 text-[11px] font-semibold text-paper">▶ From TikTok</span>
+                  <span className="rounded-full bg-ink px-2 py-0.5 text-[11px] font-semibold text-paper">{s.fromTikTok}</span>
                 )}
                 {stop.bookAhead && (
-                  <span className="rounded-full bg-coral-soft px-2 py-0.5 text-[11px] font-semibold text-coral">Book ahead</span>
+                  <span className="rounded-full bg-coral-soft px-2 py-0.5 text-[11px] font-semibold text-coral">{s.bookAhead}</span>
                 )}
                 {stop.verified === false && (
-                  <span title="We couldn't confirm this exact spot on the map — double-check before you go" className="text-[11px] text-muted">
-                    ≈ location
+                  <span title={s.approxTitle} className="text-[11px] text-muted">
+                    {s.approx}
                   </span>
                 )}
               </div>
@@ -101,12 +104,12 @@ export function StopCard({
               {active && (
                 <div className="animate-rise mt-3 space-y-2 text-sm">
                   <p className="text-teal">
-                    <span className="font-semibold">Why you: </span>
+                    <span className="font-semibold">{s.whyYou}</span>
                     {stop.whyYou}
                   </p>
                   {stop.insiderTip && (
                     <p className="rounded-xl bg-sand px-3 py-2">
-                      <span className="font-semibold">💡 Insider tip: </span>
+                      <span className="font-semibold">{s.insiderTip}</span>
                       {stop.insiderTip}
                     </p>
                   )}
@@ -114,14 +117,14 @@ export function StopCard({
                   <div className="flex flex-wrap gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
                     {booking && (
                       <a href={booking.href} target="_blank" rel="noopener" className="rounded-full bg-coral px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
-                        {booking.label} ↗
+                        {s.booking[booking.kind]} ↗
                       </a>
                     )}
-                    <a href={directionsLink(stop)} target="_blank" rel="noopener" className={linkCls}>Directions</a>
-                    <a href={uberLink(stop)} target="_blank" rel="noopener" className={linkCls}>🚕 Ride here</a>
-                    <a href={mapsLink(stop, city)} target="_blank" rel="noopener" className={linkCls}>Reviews & hours</a>
+                    <a href={directionsLink(stop)} target="_blank" rel="noopener" className={linkCls}>{s.directions}</a>
+                    <a href={uberLink(stop)} target="_blank" rel="noopener" className={linkCls}>{s.ride}</a>
+                    <a href={mapsLink(stop, city)} target="_blank" rel="noopener" className={linkCls}>{s.reviews}</a>
                     <a href={stop.tiktokUrl ?? tiktokSearchLink(stop, city)} target="_blank" rel="noopener" className={linkCls}>
-                      {stop.tiktokUrl ? "▶ Watch your TikTok" : "▶ See it on TikTok"}
+                      {stop.tiktokUrl ? s.watchTikTok : s.seeTikTok}
                     </a>
                   </div>
                 </div>
@@ -133,7 +136,7 @@ export function StopCard({
                   e.stopPropagation();
                   onRemove();
                 }}
-                aria-label={`Remove ${stop.name}`}
+                aria-label={t.trip.remove(stop.name)}
                 // Always visible on touch screens (no hover there); hover-only on desktop.
                 className="shrink-0 p-1 text-xs text-muted transition hover:text-coral sm:opacity-0 sm:group-hover:opacity-100"
               >
