@@ -13,7 +13,7 @@ const BodySchema = z.object({
 export async function POST(req: Request) {
   const parsed = BodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ ok: false, reason: "bad_link", message: "Paste a TikTok link first." });
-  const blocked = guard(req, "tiktok");
+  const blocked = await guard(req, "tiktok");
   if (blocked) return blocked;
   try {
     return Response.json(await importTikTok(parsed.data));

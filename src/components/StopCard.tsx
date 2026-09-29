@@ -28,6 +28,7 @@ export function StopCard({
   index,
   city,
   active,
+  readOnly = false,
   onSelect,
   onRemove,
 }: {
@@ -35,10 +36,11 @@ export function StopCard({
   index: number;
   city: string;
   active: boolean;
+  readOnly?: boolean;
   onSelect: () => void;
   onRemove: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: stop.id, disabled: readOnly });
   const booking = bookingLinkFor(stop, city);
   const leg = stop.travelToNext;
 
@@ -57,6 +59,7 @@ export function StopCard({
           } ${isDragging ? "rotate-1 shadow-2xl" : ""}`}
         >
           <div className="flex items-start gap-3">
+            {!readOnly && (
             <button
               {...attributes}
               {...listeners}
@@ -66,6 +69,7 @@ export function StopCard({
             >
               ⋮⋮
             </button>
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white ${stop.isHiddenGem ? "bg-gold" : "bg-ink"}`}>
@@ -122,6 +126,7 @@ export function StopCard({
             </div>
             <div className="flex shrink-0 flex-col items-end gap-2">
               <span className="text-xs font-medium text-muted">{stop.costEstimate}</span>
+              {!readOnly && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -132,6 +137,7 @@ export function StopCard({
               >
                 ✕
               </button>
+              )}
             </div>
           </div>
         </article>

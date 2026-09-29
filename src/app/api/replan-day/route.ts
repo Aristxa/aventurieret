@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   if (!parsed.success || parsed.data.dayIndex >= parsed.data.plan.days.length) {
     return Response.json({ error: "Invalid request." }, { status: 400 });
   }
-  const blocked = guard(req, "replan");
+  const blocked = await guard(req, "replan");
   if (blocked) return blocked;
   const { request, plan, dayIndex, instruction } = parsed.data;
 

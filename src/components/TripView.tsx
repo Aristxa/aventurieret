@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { addSpotToDay, formatDate, reflowDay, streamRequest } from "@/lib/client";
+import { addSpotToDay, apiPost, formatDate, reflowDay, streamRequest } from "@/lib/client";
 import { staysLink } from "@/lib/links";
 import type { Day, SavedSpot, Trip } from "@/lib/types";
 import { StopCard } from "./StopCard";
@@ -24,6 +24,7 @@ export function TripView({
   trip,
   pending = {},
   notice = null,
+  readOnly = false,
   onChange,
   onBack,
 }: {
@@ -31,6 +32,8 @@ export function TripView({
   /** Days still being planned, with the place names picked so far. */
   pending?: Record<number, string[]>;
   notice?: string | null;
+  /** Shared-link view: no editing, importing or sharing. */
+  readOnly?: boolean;
   onChange: (t: Trip) => void;
   onBack: () => void;
 }) {
@@ -43,7 +46,13 @@ export function TripView({
   const [customTweak, setCustomTweak] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-  const saved = trip.saved ?? [];
+  const saved = readOnly ? [] : (trip.saved ?? []);
+  const [shareState, setShareState] = useState<
+    | { status: "idle" }
+    | { status: "working" }
+    | { status: "done"; url: string; copied: boolean }
+    | { status: "error"; message: string }
+  >({ status: "idle" });
 
   const day = plan.days[dayIdx];
   const dayPending = pending[dayIdx];
@@ -117,12 +126,39 @@ export function TripView({
     return { stops: stops.length, gems: stops.filter((s) => s.isHiddenGem).length };
   }, [plan]);
 
+  const shareTrip = async () => {
+    setShareState({ status: "working" });
+    const res = await apiPost("/api/share", { trip: { request: trip.request, plan }, existing: trip.share }).catch(() => null);
+    const data = res ? await res.json().catch(() => ({})) : {};
+    if (!res?.ok || !data.id) {
+      setShareState({ status: "error", message: data.message ?? "Couldn't create the link. Try again." });
+      return;
+    }
+    if (data.id !== trip.share?.id) onChange({ ...trip, share: { id: data.id, editToken: data.editToken } });
+    const url = `${window.location.origin}/t/${data.id}`;
+    // Phones get the native share sheet; desktops get the link copied.
+    if (navigator.share && window.matchMedia("(pointer: coarse)").matches) {
+      await navigator.share({ title: plan.title, text: plan.summary, url }).catch(() => {});
+      setShareState({ status: "done", url, copied: false });
+      return;
+    }
+    const copied = await navigator.clipboard.writeText(url).then(
+      () => true,
+      () => false,
+    );
+    setShareState({ status: "done", url, copied });
+  };
+
   const onSelect = useCallback((id: string) => setActiveId((cur) => (cur === id ? null : id)), []);
 
   return (
     <div className="mx-auto w-full max-w-7xl flex-1 px-4 pb-16 sm:px-6">
       <header className="py-6">
-        <button onClick={onBack} className="text-sm text-muted hover:text-ink">← All trips</button>
+        {!readOnly && (
+          <button onClick={onBack} className="text-sm text-muted hover:text-ink">
+            ← All trips
+          </button>
+        )}
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
             <h1 className="font-display text-4xl leading-tight sm:text-5xl">{plan.title}</h1>
@@ -158,12 +194,48 @@ export function TripView({
             </button>
           ))}
         </nav>
-          <button
-            onClick={() => setImportOpen(true)}
-            className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper shadow-lg transition hover:scale-[1.03]"
-          >
-            ▶ Add from TikTok
-          </button>
+          {!readOnly && (
+            <>
+              <button
+                onClick={() => setImportOpen(true)}
+                className="rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-paper shadow-lg transition hover:scale-[1.03]"
+              >
+                ▶ Add from TikTok
+              </button>
+              <div className="relative">
+                <button
+                  onClick={shareTrip}
+                  disabled={building || shareState.status === "working"}
+                  className="rounded-full border border-ink px-5 py-2.5 text-sm font-semibold transition hover:bg-ink hover:text-paper disabled:opacity-50"
+                >
+                  {shareState.status === "working" ? "Creating link…" : trip.share ? "🔗 Update & share" : "🔗 Share trip"}
+                </button>
+                {(shareState.status === "done" || shareState.status === "error") && (
+                  <div className="animate-rise absolute left-0 z-30 mt-2 w-80 rounded-2xl border border-line bg-paper p-4 text-sm shadow-2xl sm:left-auto sm:right-0">
+                    {shareState.status === "error" ? (
+                      <p className="text-coral">{shareState.message}</p>
+                    ) : (
+                      <>
+                        <p className="font-semibold">{shareState.copied ? "✓ Link copied!" : "Your trip link"}</p>
+                        <input
+                          readOnly
+                          value={shareState.url}
+                          onFocus={(e) => e.target.select()}
+                          className="mt-2 w-full rounded-lg border border-line bg-sand px-3 py-2 text-xs"
+                        />
+                        <p className="mt-2 text-xs text-muted">
+                          Anyone with the link can view this trip. If you edit it later, tap Share again to update the link.
+                        </p>
+                      </>
+                    )}
+                    <button onClick={() => setShareState({ status: "idle" })} className="mt-2 text-xs font-medium text-muted hover:text-ink">
+                      Close
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </header>
       {importOpen && <TikTokImport trip={trip} onAdd={addSpots} onClose={() => setImportOpen(false)} />}
@@ -232,6 +304,7 @@ export function TripView({
                     {day.area} · {ENERGY[day.energy]}
                   </p>
                 </div>
+                {!readOnly && (
                 <div className="relative">
                   <button
                     onClick={() => setMenuOpen((o) => !o)}
@@ -264,6 +337,7 @@ export function TripView({
                     </div>
                   )}
                 </div>
+                )}
               </div>
 
               {notice && <p className="mt-3 rounded-xl bg-coral-soft px-3 py-2 text-sm text-coral">{notice}</p>}
@@ -288,12 +362,14 @@ export function TripView({
               ) : day.stops.length === 0 && !replanning ? (
                 <div className="py-12 text-center">
                   <p className="text-muted">This day hasn&apos;t been planned yet.</p>
+                  {!readOnly && (
                   <button
                     onClick={() => replan(`Plan this day from scratch: ${day.theme} in ${day.area}.`)}
                     className="mt-4 rounded-full bg-coral px-6 py-2.5 font-semibold text-white hover:opacity-90"
                   >
                     ✨ Plan this day
                   </button>
+                  )}
                 </div>
               ) : replanning ? (
                 <div className="py-12 text-center">
@@ -317,6 +393,7 @@ export function TripView({
                           city={city}
                           active={activeId === s.id}
                           onSelect={() => onSelect(s.id)}
+                          readOnly={readOnly}
                           onRemove={() => removeStop(s.id)}
                         />
                       ))}
@@ -324,7 +401,7 @@ export function TripView({
                   </SortableContext>
                 </DndContext>
               )}
-              {day.stops.length > 0 && !dayPending && !replanning && (
+              {!readOnly && day.stops.length > 0 && !dayPending && !replanning && (
                 <p className="mt-2 text-center text-xs text-muted">
                   Drag ⋮⋮ to reorder — times update automatically.{building && " Other days are still being planned."}
                 </p>

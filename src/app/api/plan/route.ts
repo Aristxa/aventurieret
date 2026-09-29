@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: "Invalid trip details." }, { status: 400 });
   }
-  const blocked = guard(req, "plan");
+  const blocked = await guard(req, "plan");
   if (blocked) return blocked;
   const trip = parsed.data;
 

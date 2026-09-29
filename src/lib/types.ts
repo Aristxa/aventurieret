@@ -159,6 +159,8 @@ export type Trip = {
   request: TripRequest;
   plan: Plan;
   saved?: SavedSpot[];
+  /** Set once the trip has a public link; the token lets this browser update it. */
+  share?: { id: string; editToken: string };
 };
 
 // Events streamed from /api/plan and /api/replan-day as NDJSON.
