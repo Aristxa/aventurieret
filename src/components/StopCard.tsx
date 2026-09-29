@@ -47,14 +47,14 @@ export function StopCard({
   return (
     <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition }} className={isDragging ? "z-20" : ""}>
       <div className="flex gap-3">
-        <div className="flex w-14 shrink-0 flex-col items-end pt-4">
+        <div className="flex w-11 shrink-0 flex-col items-end pt-4 sm:w-14">
           <span className="text-sm font-semibold tabular-nums">{stop.startTime}</span>
           <span className="text-xs text-muted">{stop.durationMin >= 60 ? `${Math.round(stop.durationMin / 30) / 2}h` : `${stop.durationMin}m`}</span>
         </div>
 
         <article
           onClick={onSelect}
-          className={`group relative flex-1 cursor-pointer rounded-2xl border bg-paper p-4 transition ${
+          className={`group relative min-w-0 flex-1 cursor-pointer rounded-2xl border bg-paper p-3 transition sm:p-4 ${
             active ? "border-coral shadow-lg shadow-coral/10" : "border-line hover:border-ink/30"
           } ${isDragging ? "rotate-1 shadow-2xl" : ""}`}
         >
@@ -94,6 +94,9 @@ export function StopCard({
                 )}
               </div>
               <p className="mt-1.5 text-sm text-ink/80">{stop.description}</p>
+              {stop.costEstimate && (
+                <p className="mt-2 inline-block rounded-full bg-sand px-2.5 py-0.5 text-xs font-medium text-muted">💶 {stop.costEstimate}</p>
+              )}
 
               {active && (
                 <div className="animate-rise mt-3 space-y-2 text-sm">
@@ -124,27 +127,25 @@ export function StopCard({
                 </div>
               )}
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-2">
-              <span className="text-xs font-medium text-muted">{stop.costEstimate}</span>
-              {!readOnly && (
+            {!readOnly && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove();
                 }}
                 aria-label={`Remove ${stop.name}`}
-                className="text-xs text-muted opacity-0 transition hover:text-coral group-hover:opacity-100"
+                // Always visible on touch screens (no hover there); hover-only on desktop.
+                className="shrink-0 p-1 text-xs text-muted transition hover:text-coral sm:opacity-0 sm:group-hover:opacity-100"
               >
                 ✕
               </button>
-              )}
-            </div>
+            )}
           </div>
         </article>
       </div>
 
       {leg.mode !== "none" && (
-        <div className="my-1 ml-[4.25rem] flex items-center gap-2 border-l-2 border-dashed border-line py-2 pl-4 text-xs text-muted">
+        <div className="my-1 ml-[3.5rem] flex items-center gap-2 border-l-2 border-dashed border-line py-2 pl-4 text-xs text-muted sm:ml-[4.25rem]">
           {LEG[leg.mode]} {leg.minutes} min{leg.note ? ` · ${leg.note}` : ""}
         </div>
       )}

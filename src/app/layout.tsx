@@ -6,8 +6,8 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Wander — your trip, planned like a local",
-  description: "Tell Wander how long you're staying and what you love. Get a day-by-day plan with hidden gems, logistics and bookings.",
+  title: "Aventurieret — your trip, planned like a local",
+  description: "Tell Aventurieret how long you're staying and what you love. Get a day-by-day plan with hidden gems, logistics and bookings.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

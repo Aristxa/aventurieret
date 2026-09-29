@@ -210,7 +210,7 @@ export default function Home() {
       <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_1.1fr] lg:py-20">
         <div className="lg:pt-8">
           <div className="font-display text-2xl font-semibold">
-            wander<span className="text-coral">.</span>
+            Aventurieret<span className="text-coral">.</span>
           </div>
           <h1 className="mt-10 font-display text-5xl leading-[1.05] sm:text-6xl">
             Your whole trip,
@@ -218,7 +218,7 @@ export default function Home() {
             <em className="text-coral">planned like a local.</em>
           </h1>
           <p className="mt-6 max-w-md text-lg text-ink/70">
-            Tell us how long you&apos;re staying and what you love. Wander builds a day-by-day plan with hidden gems,
+            Tell us how long you&apos;re staying and what you love. Aventurieret builds a day-by-day plan with hidden gems,
             realistic timing, and everything you&apos;d otherwise forget: airport transfers, closures, tipping, what to pack.
           </p>
           <ul className="mt-8 space-y-3 text-sm">

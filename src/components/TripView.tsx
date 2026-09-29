@@ -161,19 +161,19 @@ export function TripView({
         )}
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div className="max-w-2xl">
-            <h1 className="font-display text-4xl leading-tight sm:text-5xl">{plan.title}</h1>
+            <h1 className="font-display text-3xl leading-tight break-words sm:text-5xl">{plan.title}</h1>
             <p className="mt-2 text-ink/75">{plan.summary}</p>
           </div>
-          <div className="flex gap-3 text-center">
+          <div className="grid w-full grid-cols-4 gap-2 text-center sm:flex sm:w-auto sm:gap-3">
             {[
               [plan.days.length, "days"],
               [totals.stops, "places"],
               [totals.gems, "hidden gems"],
               [plan.budget.perPersonPerDay, "pp / day"],
             ].map(([v, l]) => (
-              <div key={String(l)} className="rounded-2xl border border-line bg-paper px-4 py-2">
-                <div className="font-display text-xl">{v}</div>
-                <div className="text-[11px] uppercase tracking-wider text-muted">{l}</div>
+              <div key={String(l)} className="min-w-0 rounded-2xl border border-line bg-paper px-2 py-2 sm:px-4">
+                <div className="font-display text-base break-words sm:text-xl">{v}</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted sm:text-[11px]">{l}</div>
               </div>
             ))}
           </div>
@@ -296,10 +296,10 @@ export function TripView({
               </div>
             )}
 
-            <div className="mt-2 rounded-3xl border border-line bg-paper/60 p-4 sm:p-6">
+            <div className="mt-2 rounded-3xl border border-line bg-paper/60 p-3 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-display text-3xl">{day.theme}</h2>
+                  <h2 className="font-display text-2xl sm:text-3xl">{day.theme}</h2>
                   <p className="mt-1 text-sm text-muted">
                     {day.area} · {ENERGY[day.energy]}
                   </p>

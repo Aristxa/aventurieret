@@ -18,7 +18,7 @@ export function InviteGate({ onDone, onClose }: { onDone: () => void; onClose: (
         className="animate-rise w-full max-w-sm rounded-3xl bg-paper p-6 text-center shadow-2xl"
       >
         <div className="text-4xl">🎟️</div>
-        <h2 className="mt-3 font-display text-2xl">Wander is invite-only for now</h2>
+        <h2 className="mt-3 font-display text-2xl">Aventurieret is invite-only for now</h2>
         <p className="mt-2 text-sm text-muted">Enter the code you were given to start planning.</p>
         <input
           autoFocus
