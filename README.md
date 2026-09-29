@@ -1,6 +1,6 @@
-# wander.
+# Aventurieret
 
-Your whole trip, planned like a local. Tell Wander where you're going, for how long and what you love. It builds a day-by-day plan that includes hidden gems, realistic timing and routing, plus the logistics people forget, with links to book everything.
+Your whole trip, planned like a local. Tell Aventurieret where you're going, for how long and what you love. It builds a day-by-day plan that includes hidden gems, realistic timing and routing, plus the logistics people forget, with links to book everything.
 
 ## Run it
 
@@ -38,5 +38,5 @@ src/components/           PlannerForm, Generating, TripView, StopCard, TripMap
 
 ## Roadmap
 
-- **Next:** a mobile "Share → Wander" button. With accounts, every imported TikTok place also goes into a shared hidden-gems database.
+- **Next:** a mobile "Share → Aventurieret" button. With accounts, every imported TikTok place also goes into a shared hidden-gems database.
 - **Phase 3:** accounts and a database (e.g. Supabase) so trips sync and can be shared; group voting; live re-planning based on location and weather; partner APIs (GetYourGuide, Booking.com, Duffel, Welcome Pickups) for bookings inside the app.

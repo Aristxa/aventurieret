@@ -231,3 +231,14 @@ export function nearestDayIndex(days: Day[], spot: { lat: number; lng: number })
   );
   return best;
 }
+
+let shareEnabled: Promise<boolean> | null = null;
+
+/** Whether the server has storage for share links. Fetched once per page load. */
+export function fetchShareEnabled() {
+  shareEnabled ??= fetch("/api/share")
+    .then((r) => r.json())
+    .then((d: { enabled?: boolean }) => !!d.enabled)
+    .catch(() => false);
+  return shareEnabled;
+}

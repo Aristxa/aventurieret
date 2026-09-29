@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { guard } from "@/lib/guard";
+import { getRedis } from "@/lib/redis";
 import { saveShare, ShareError, SharedTripSchema } from "@/lib/share";
 
 const MAX_BYTES = 500_000;
@@ -29,4 +30,9 @@ export async function POST(req: Request) {
     console.error("[share]", err);
     return Response.json({ message: "Couldn't create the link. Try again." }, { status: 500 });
   }
+}
+
+/** Lets the UI hide the Share button until storage is configured. */
+export function GET() {
+  return Response.json({ enabled: getRedis() !== null });
 }

@@ -207,25 +207,28 @@ export default function Home() {
       <div className="pointer-events-none absolute -right-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-coral/15 blur-3xl" />
       <div className="pointer-events-none absolute -left-40 top-80 h-[28rem] w-[28rem] rounded-full bg-teal/10 blur-3xl" />
 
-      <div className="relative mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_1.1fr] lg:py-20">
-        <div className="lg:pt-8">
+      <div className="relative mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[1fr_1.1fr] lg:gap-x-10 lg:py-20">
+        <div className="lg:col-start-1 lg:row-start-1 lg:pt-8">
           <div className="font-display text-2xl font-semibold">
             Aventurieret<span className="text-coral">.</span>
           </div>
-          <h1 className="mt-10 font-display text-5xl leading-[1.05] sm:text-6xl">
+          <h1 className="mt-6 font-display text-4xl leading-[1.05] sm:mt-10 sm:text-6xl">
             Your whole trip,
             <br />
             <em className="text-coral">planned like a local.</em>
           </h1>
-          <p className="mt-6 max-w-md text-lg text-ink/70">
+          <p className="mt-4 max-w-md text-base text-ink/70 sm:mt-6 sm:text-lg">
             Tell us how long you&apos;re staying and what you love. Aventurieret builds a day-by-day plan with hidden gems,
             realistic timing, and everything you&apos;d otherwise forget: airport transfers, closures, tipping, what to pack.
           </p>
-          <ul className="mt-8 space-y-3 text-sm">
+        </div>
+
+        <ul className="order-last space-y-3 text-sm lg:order-none lg:col-start-1 lg:row-start-2">
             {[
               ["💎", "Hidden gems, not just the top-10 list"],
               ["🗺️", "Every stop on a map, routed so you don't zig-zag"],
               ["✨", "Rain? Tired? Re-plan any day in one tap"],
+              ["▶", "Paste a TikTok and its places land on your map"],
               ["🎟️", "Book tickets, tables, stays and rides from the plan"],
             ].map(([i, t]) => (
               <li key={t} className="flex items-center gap-3">
@@ -233,10 +236,9 @@ export default function Home() {
                 {t}
               </li>
             ))}
-          </ul>
-        </div>
+        </ul>
 
-        <div>
+        <div className="lg:col-start-2 lg:row-span-2 lg:row-start-1">
           {error && (
             <div className="animate-rise mb-4 rounded-2xl border border-coral/30 bg-coral-soft px-4 py-3 text-sm text-coral">{error}</div>
           )}
@@ -259,7 +261,7 @@ export default function Home() {
                         deleteTrip(t.id);
                       }}
                       aria-label="Delete trip"
-                      className="absolute right-3 top-3 text-xs text-muted opacity-0 hover:text-coral group-hover:opacity-100"
+                      className="absolute right-3 top-3 p-1 text-xs text-muted hover:text-coral sm:opacity-0 sm:group-hover:opacity-100"
                     >
                       ✕
                     </button>

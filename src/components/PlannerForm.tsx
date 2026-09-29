@@ -120,6 +120,7 @@ export function PlannerForm({ onSubmit }: { onSubmit: (r: TripRequest) => void }
                 <Label>Arriving</Label>
                 <input
                   type="date"
+                  min={new Date().toISOString().slice(0, 10)}
                   className={inputCls}
                   value={r.startDate}
                   onChange={(e) => set("startDate", e.target.value)}

@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { addSpotToDay, apiPost, formatDate, reflowDay, streamRequest } from "@/lib/client";
+import { addSpotToDay, apiPost, fetchShareEnabled, formatDate, reflowDay, streamRequest } from "@/lib/client";
 import { staysLink } from "@/lib/links";
 import type { Day, SavedSpot, Trip } from "@/lib/types";
 import { StopCard } from "./StopCard";
@@ -53,6 +53,10 @@ export function TripView({
     | { status: "done"; url: string; copied: boolean }
     | { status: "error"; message: string }
   >({ status: "idle" });
+  const [canShare, setCanShare] = useState(false);
+  useEffect(() => {
+    if (!readOnly) fetchShareEnabled().then(setCanShare);
+  }, [readOnly]);
 
   const day = plan.days[dayIdx];
   const dayPending = pending[dayIdx];
@@ -202,6 +206,7 @@ export function TripView({
               >
                 ▶ Add from TikTok
               </button>
+              {canShare && (
               <div className="relative">
                 <button
                   onClick={shareTrip}
@@ -234,6 +239,7 @@ export function TripView({
                   </div>
                 )}
               </div>
+              )}
             </>
           )}
         </div>
@@ -409,7 +415,7 @@ export function TripView({
             </div>
           </section>
 
-          <aside className="h-[420px] lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
+          <aside className="order-first h-[260px] sm:h-[360px] lg:sticky lg:top-6 lg:order-none lg:h-[calc(100vh-3rem)]">
             <TripMap stops={day.stops} saved={saved} center={plan.destination} activeId={activeId} onSelect={onSelect} />
           </aside>
         </div>
