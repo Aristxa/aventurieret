@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@theme {
+  --color-sand: #f6f1e9;
+  --color-paper: #fffdf9;
+  --color-ink: #1d1b18;
+  --color-muted: #6f675c;
+  --color-line: #e7dfd2;
+  --color-coral: #e4572e;
+  --color-coral-soft: #fbe4da;
+  --color-teal: #1f6f6b;
+  --color-teal-soft: #dcefec;
+  --color-gold: #c99a2e;
+  --color-gold-soft: #f7ecd0;
+  --font-sans: var(--font-inter);
+  --font-display: var(--font-fraunces);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-sand);
+  color: var(--color-ink);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-rise { animation: rise 0.45s ease-out both; }
+
+@keyframes drift {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-8px) rotate(2deg); }
+}
+.animate-drift { animation: drift 4s ease-in-out infinite; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+.mapboxgl-popup-content {
+  border-radius: 12px !important;
+  padding: 10px 12px !important;
+  font-family: var(--font-inter), sans-serif;
 }
